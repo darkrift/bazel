@@ -173,6 +173,7 @@ copy_file(
             ext = "so",
             tag = "linux-arm64",
         ),
+        #purl = "pkg:generic/async-profiler@4.1?arch=arm64&os=linux",
         integrity = "sha256-0Mucl8OAZytiXAblo+1XjpkPRnTGqui1JJ9YTEyaxQ4=",
         strip_prefix = "async-profiler-4.1-linux-arm64/lib",
         urls = ["https://github.com/async-profiler/async-profiler/releases/download/v4.1/async-profiler-4.1-linux-arm64.tar.gz"],

@@ -51,6 +51,7 @@ load(
 )
 load(
     ":utils.bzl",
+    "compute_package_metadata_preamble",
     "download_remote_files",
     "get_auth",
     "patch",
@@ -259,8 +260,15 @@ def _http_file_impl(ctx):
         auth = get_auth(ctx, source_urls),
         integrity = ctx.attr.integrity,
     )
+
     ctx.file("WORKSPACE", "workspace(name = \"{name}\")".format(name = ctx.name))
     ctx.file("file/BUILD", _HTTP_FILE_BUILD.format(path = repr(downloaded_file_path)))
+
+    preamble = compute_package_metadata_preamble(ctx)
+
+    if preamble:
+        ctx.file("BUILD.bazel", preamble)
+        ctx.file("REPO.bazel", "repo(default_package_metadata = [\"//:package_metadata\"])")
 
     return _update_integrity_attr(ctx, _http_file_attrs, download_info)
 
@@ -301,11 +309,18 @@ def _http_jar_impl(ctx):
         file_name = downloaded_file_name,
     ))
 
+    preamble = compute_package_metadata_preamble(ctx)
+
+    if preamble:
+        ctx.file("BUILD.bazel", preamble)
+        ctx.file("REPO.bazel", "repo(default_package_metadata = [\"//:package_metadata\"])")
+
     return _update_integrity_attr(ctx, _http_jar_attrs, download_info)
 
 _http_archive_attrs = {
     "url": attr.string(doc = _URL_DOC),
     "urls": attr.string_list(doc = _URLS_DOC),
+    "purl": attr.string(),
     "sha256": attr.string(
         doc = """The expected SHA-256 of the file downloaded.
 
@@ -556,6 +571,7 @@ easier but either this attribute or `sha256` should be set before shipping.""",
     ),
     "url": attr.string(doc = _URL_DOC),
     "urls": attr.string_list(doc = _URLS_DOC),
+    "purl": attr.string(),
     "netrc": attr.string(
         doc = "Location of the .netrc file to use for authentication",
     ),
@@ -613,6 +629,7 @@ easier but either this attribute or `sha256` should be set before shipping.""",
     ),
     "url": attr.string(doc = _URL_DOC + "\n\nThe URL must end in `.jar`."),
     "urls": attr.string_list(doc = _URLS_DOC + "\n\nAll URLs must end in `.jar`."),
+    "purl": attr.string(),
     "netrc": attr.string(
         doc = "Location of the .netrc file to use for authentication",
     ),

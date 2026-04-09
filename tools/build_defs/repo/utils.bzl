@@ -35,6 +35,16 @@ load(
 ```
 """
 
+load(
+    ":subresource_integrity.bzl",
+    "sri_to_checksum",
+)
+load(
+    ":purl.bzl",
+    "parse_purl",
+    "purl_to_string"
+)
+
 # Temporary directory for downloading remote patch files.
 _REMOTE_PATCH_DIR = ".tmp_remote_patches"
 
@@ -55,10 +65,20 @@ def workspace_and_buildfile(ctx):
     if ctx.attr.build_file and ctx.attr.build_file_content:
         ctx.fail("Only one of build_file and build_file_content can be provided.")
 
+    full_content = ""
     if ctx.attr.build_file:
-        ctx.file("BUILD.bazel", ctx.read(ctx.attr.build_file))
+        full_content = ctx.read(ctx.attr.build_file)
     elif ctx.attr.build_file_content:
-        ctx.file("BUILD.bazel", ctx.attr.build_file_content)
+        full_content = ctx.attr.build_file_content
+
+    preamble = compute_package_metadata_preamble(ctx)
+
+    if preamble:
+        full_content = preamble + full_content
+        ctx.file("REPO.bazel", "repo(default_package_metadata = [\"//:package_metadata\"])")
+
+    ctx.file("BUILD.bazel", full_content)
+
 
 def _is_windows(ctx):
     return ctx.os.name.lower().find("windows") != -1
@@ -533,3 +553,41 @@ def get_auth(ctx, urls):
     if hasattr(ctx.attr, "auth_patterns") and ctx.attr.auth_patterns:
         auth_patterns = ctx.attr.auth_patterns
     return use_netrc(netrc, urls, auth_patterns)
+
+
+
+_PACKAGE_METADATA_TMPL = """
+load("{package_load}", "package_metadata")
+
+package_metadata(
+    name = "package_metadata",
+    purl = {purl},
+    visibility = ["//visibility:public"],
+)
+
+"""
+
+#TODO report real download endpoint instead of first one from the list
+def compute_package_metadata_preamble(ctx):
+    if hasattr(ctx.attr, "purl") and ctx.attr.purl:
+        purl = parse_purl(ctx.attr.purl)
+
+        url = ""
+        if ctx.attr.url:
+            url = ctx.attr.url
+        else:
+            url = ctx.attr.urls[0]
+
+        purl["qualifiers"]["repository_url"] = url
+
+        if ctx.attr.sha256:
+            purl["qualifiers"]["checksum"] = ctx.attr.sha256
+        elif ctx.attr.integrity:
+            purl["qualifiers"]["checksum"] = sri_to_checksum(ctx.attr.integrity)
+
+        return _PACKAGE_METADATA_TMPL.format(
+            purl= repr(purl_to_string(purl)),
+            package_load = str(Label("@package_metadata//rules:package_metadata.bzl")),
+        )
+
+    return None

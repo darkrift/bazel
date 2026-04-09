@@ -23,6 +23,7 @@ bazel_dep(name = "googleapis", version = "0.0.0-20250604-de157ca3")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", repo_name = "com_google_googletest")
 bazel_dep(name = "grpc-java", version = "1.71.0")
 bazel_dep(name = "grpc", version = "1.76.0.bcr.1", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "package_metadata", version = "0.0.7")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")
 bazel_dep(name = "re2", version = "2025-11-05.bcr.1")
@@ -387,6 +388,7 @@ http_file(
     executable = True,
     integrity = "sha256-xrOn19PntwxvUbcGo7kL0BgzhGxU0yyjLwAn8AIm/20=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.5/jq-linux64"],
+    purl = "pkg:generic/jq@1.5?os=linux&arch=amd64",
 )
 
 http_file(
@@ -394,6 +396,7 @@ http_file(
     executable = True,
     integrity = "sha256-TdLYoGYd8LIvG7mh+YMPBrbzuPfZEhGh7118TwaotKU=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64"],
+    purl = "pkg:generic/jq@1.7.1?os=linux&arch=arm64",
 )
 
 http_file(
@@ -401,6 +404,7 @@ http_file(
     executable = True,
     integrity = "sha256-hot8PKdCJKAt22EyYd38LkOxLart1etYNz29x/LF+SQ=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-s390x"],
+    purl = "pkg:generic/jq@1.7.1?os=linux&arch=s390x",
 )
 
 http_file(
@@ -408,6 +412,7 @@ http_file(
     executable = True,
     integrity = "sha256-OG6SyYKlb+SFFGjXqTHfyilWDO4wag5mxqG9QGXT2sU=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.5/jq-osx-amd64"],
+    purl = "pkg:generic/jq@1.5?os=darwin&arch=amd64",
 )
 
 http_file(
@@ -415,6 +420,7 @@ http_file(
     executable = True,
     integrity = "sha256-C75hnmY+DeLFUL4v4NJA0HZ5nW+KZStw+gSuqKg2Loo=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-macos-arm64"],
+    purl = "pkg:generic/jq@1.7.1?os=darwin&arch=arm64",
 )
 
 http_file(
@@ -422,6 +428,21 @@ http_file(
     executable = True,
     integrity = "sha256-6+zYQLpH779mgihoF4zHIaFRBgk396xAbj0xvQFb3pQ=",
     urls = ["https://github.com/jqlang/jq/releases/download/jq-1.5/jq-win64.exe"],
+    purl = "pkg:generic/jq@1.5?os=windows&arch=amd64",
+)
+
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "pantor_inja",
+    build_file_content = "",
+    integrity = "sha256-cVX5RFU8pgZLJuiObK6Lcfi+dkgyycfG1ZmODV/WDFU=",
+    strip_prefix = "inja-3.4.0",
+    urls = [
+        "https://github.com/pantor/inja/archive/refs/tags/v3.4.0.tar.gz",
+    ],
+    #purl = "pkg:generic/inja@3.4.0"
 )
 
 async_profiler_repos = use_extension("//:repositories.bzl", "async_profiler_repos")
