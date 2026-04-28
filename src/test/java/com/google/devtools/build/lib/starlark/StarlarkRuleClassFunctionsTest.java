@@ -5697,6 +5697,35 @@ public final class StarlarkRuleClassFunctionsTest extends BuildViewTestCase {
   }
 
   @Test
+  public void aspectAllToolchains() throws Exception {
+    evalAndExport(
+        ev,
+        """
+        def _aspect_impl(target, ctx):
+            return []
+        my_aspect = aspect(
+            implementation = _aspect_impl,
+            toolchains_aspects = ["*"]
+        )
+        """);
+
+    StarlarkDefinedAspect aspect = (StarlarkDefinedAspect) ev.lookup("my_aspect");
+    var toolchainsAspects = aspect.getToolchainsAspects();
+
+    assertThat(toolchainsAspects).isInstanceOf(FixedListSupplier.class);
+    assertThat(((FixedListSupplier<?>) toolchainsAspects).getList()).containsExactly("*");
+  }
+
+  @Test
+  public void aspectAllToolchainsMustBeOnlyEntry() throws Exception {
+    ev.checkEvalErrorContains(
+        "'*' must be the only string in 'toolchains_aspects' list",
+        "def _aspect_impl(target, ctx):",
+        "   return []",
+        "aspect(implementation = _aspect_impl, toolchains_aspects=['*', '//toolchains:type1'])");
+  }
+
+  @Test
   public void toolchainsAspectsDefault_emptyList() throws Exception {
     evalAndExport(
         ev,

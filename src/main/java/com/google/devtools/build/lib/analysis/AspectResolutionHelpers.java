@@ -25,6 +25,7 @@ import com.google.devtools.build.lib.packages.AdvertisedProviderSet;
 import com.google.devtools.build.lib.packages.Aspect;
 import com.google.devtools.build.lib.packages.AspectClass;
 import com.google.devtools.build.lib.packages.AspectDefinition;
+import com.google.devtools.build.lib.packages.AspectPropagationEdgesSupplier;
 import com.google.devtools.build.lib.packages.AspectPropagationEdgesSupplier.FixedListSupplier;
 import com.google.devtools.build.lib.packages.AspectPropagationEdgesSupplier.FunctionSupplier;
 import com.google.devtools.build.lib.packages.Attribute;
@@ -125,9 +126,11 @@ public final class AspectResolutionHelpers {
     return ImmutableList.copyOf(filteredAspectPath);
   }
 
+  @SuppressWarnings("unchecked")
   private static <T> boolean propagatesTo(
       T edge, Aspect aspect, ImmutableMultimap<Aspect, T> computedEdges) {
-    return computedEdges.containsEntry(aspect, edge) || computedEdges.containsEntry(aspect, "*");
+    return computedEdges.containsEntry(aspect, edge)
+        || computedEdges.containsEntry(aspect, (T) AspectPropagationEdgesSupplier.ALL_TOOLCHAINS);
   }
 
   /**

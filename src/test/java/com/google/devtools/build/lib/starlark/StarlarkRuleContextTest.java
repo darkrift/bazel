@@ -4279,6 +4279,33 @@ public final class StarlarkRuleContextTest extends BuildViewTestCase {
   }
 
   @Test
+  public void testNoToolchainContext_toolchainTypesIsEmpty() throws Exception {
+    // Build setting rules do not have a toolchain context, as they are part of the configuration.
+    scratch.file(
+        "test/BUILD",
+        """
+        load(':rule.bzl', 'sample_setting')
+        sample_setting(
+            name = 'test',
+            build_setting_default = True,
+        )
+        """);
+    scratch.file(
+        "test/rule.bzl",
+        """
+        def _sample_impl(ctx):
+            print(ctx.toolchains.toolchain_types())
+        sample_setting = rule(
+            implementation = _sample_impl,
+            build_setting = config.bool(flag = True),
+        )
+        """);
+
+    getConfiguredTarget("//test:test");
+    assertContainsEvent("[]");
+  }
+
+  @Test
   public void testTemplateExpansionComputedSubstitution() throws Exception {
     scratch.file(
         "test/rules.bzl",

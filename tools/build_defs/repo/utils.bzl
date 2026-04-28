@@ -77,7 +77,8 @@ def workspace_and_buildfile(ctx):
         full_content = preamble + full_content
         ctx.file("REPO.bazel", "repo(default_package_metadata = [\"//:package_metadata\"])")
 
-    ctx.file("BUILD.bazel", full_content)
+    if ctx.attr.build_file or ctx.attr.build_file_content or preamble:
+        ctx.file("BUILD.bazel", full_content)
 
 
 def _is_windows(ctx):

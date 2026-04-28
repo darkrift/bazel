@@ -44,6 +44,7 @@ import net.starlark.java.eval.StarlarkThread;
  * The type <T> is String for {@code attr_aspects} and {@link Label} for {@code toolchains_aspects}.
  */
 public sealed interface AspectPropagationEdgesSupplier<T> {
+  String ALL_TOOLCHAINS = "*";
 
   public static final AspectPropagationEdgesSupplier<String> DEFAULT_ATTR_ASPECTS_SUPPLIER =
       new FixedListSupplier<>(ImmutableSet.of());
@@ -165,6 +166,9 @@ public sealed interface AspectPropagationEdgesSupplier<T> {
       if (listResult == null || listResult.isEmpty()) {
         return ImmutableSet.of();
       }
+      if (listResult.size() == 1 && ALL_TOOLCHAINS.equals(listResult.get(0))) {
+        return wildcardToolchainsAspects();
+      }
       return ImmutableSet.copyOf(Sequence.cast(listResult, Label.class, "toolchains_aspects"));
     }
   }
@@ -221,8 +225,15 @@ public sealed interface AspectPropagationEdgesSupplier<T> {
     Sequence<String> toolchainsAspects =
         Sequence.cast(rawToolchainsAspects, String.class, "toolchains_aspects");
 
+    if (toolchainsAspects.size() == 1 && ALL_TOOLCHAINS.equals(toolchainsAspects.get(0))) {
+      return wildcardToolchainsAspects();
+    }
+
     ImmutableSet.Builder<Label> parsedLabels = new ImmutableSet.Builder<>();
     for (String input : toolchainsAspects) {
+      if (ALL_TOOLCHAINS.equals(input)) {
+        throw new EvalException("'*' must be the only string in 'toolchains_aspects' list");
+      }
       try {
         Label label = labelConverter.convert(input);
         parsedLabels.add(label);
@@ -233,5 +244,10 @@ public sealed interface AspectPropagationEdgesSupplier<T> {
       }
     }
     return parsedLabels.build();
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private static ImmutableSet<Label> wildcardToolchainsAspects() {
+    return (ImmutableSet) ImmutableSet.of(ALL_TOOLCHAINS);
   }
 }

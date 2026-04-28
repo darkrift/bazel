@@ -454,6 +454,32 @@ public final class ToolchainsForTargetsTest extends AnalysisTestCase {
   }
 
   @Test
+  public void toolchainContext_toolchainTypesEnumeratesResolvedTypes() throws Exception {
+    scratch.file(
+        "test/defs.bzl",
+        """
+        def _impl(ctx):
+            print(sorted([str(t) for t in ctx.toolchains.toolchain_types()]))
+            return []
+
+        custom_rule = rule(
+            implementation = _impl,
+            toolchains = ["//toolchain:test_toolchain"],
+        )
+        """);
+    scratch.file(
+        "test/BUILD",
+        """
+        load("//test:defs.bzl", "custom_rule")
+
+        custom_rule(name = "t")
+        """);
+
+    assertThat(update("//test:t").hasError()).isFalse();
+    assertContainsEvent("['//toolchain:test_toolchain']");
+  }
+
+  @Test
   public void execPlatform() throws Exception {
     // Add some platforms and custom constraints.
     scratch.file("platforms/BUILD", "platform(name = 'local_platform_a')");

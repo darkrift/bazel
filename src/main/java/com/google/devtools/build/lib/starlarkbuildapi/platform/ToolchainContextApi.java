@@ -15,6 +15,10 @@
 package com.google.devtools.build.lib.starlarkbuildapi.platform;
 
 import com.google.devtools.build.docgen.annot.DocCategory;
+import com.google.devtools.build.lib.cmdline.Label;
+import net.starlark.java.annot.StarlarkMethod;
+import net.starlark.java.eval.EvalException;
+import net.starlark.java.eval.Sequence;
 import net.starlark.java.annot.StarlarkBuiltin;
 import net.starlark.java.eval.StarlarkIndexable;
 import net.starlark.java.eval.StarlarkValue;
@@ -35,4 +39,12 @@ import net.starlark.java.eval.StarlarkValue;
             + " target. It can be accessed by"
             + " <code>ctx.rule.toolchains[\"//pkg:my_toolchain_type\"]</code> and it returns the"
             + " list of providers resulted from applying the aspects on these toolchain targets. ")
-public interface ToolchainContextApi extends StarlarkValue, StarlarkIndexable.Threaded {}
+public interface ToolchainContextApi extends StarlarkValue, StarlarkIndexable.Threaded {
+  @StarlarkMethod(
+      name = "toolchain_types",
+      doc =
+          "Returns the resolved toolchain type labels available in this context. This can be used"
+              + " to enumerate <code>ctx.toolchains</code> or <code>ctx.rule.toolchains</code>"
+              + " generically.")
+  Sequence<Label> toolchainTypes() throws EvalException;
+}

@@ -688,6 +688,110 @@ public final class StarlarkAspectsToolchainPropagationTest extends AnalysisTestC
   }
 
   @Test
+  public void aspectPropagatesToAllToolchainTypesTransitively() throws Exception {
+    scratch.file(
+        "test/defs.bzl",
+        """
+        def _impl(target, ctx):
+          return []
+
+        toolchain_aspect = aspect(
+          implementation = _impl,
+          toolchains_aspects = ['*'],
+          attr_aspects = ['toolchain_dep'],
+        )
+
+        def _rule_impl(ctx):
+          pass
+
+        r1 = rule(
+          implementation = _rule_impl,
+          exec_groups = {"gp": exec_group(
+              toolchains = ['//rule:toolchain_type_1', '//rule:toolchain_type_3'])},
+        )
+        """);
+    scratch.file(
+        "test/BUILD",
+        """
+        load('//test:defs.bzl', 'r1')
+        r1(name = 't1')
+        """);
+    useConfiguration("--extra_toolchains=//toolchain:foo_toolchain,//toolchain:foo_toolchain_with_dep");
+
+    var unused = update(ImmutableList.of("//test:defs.bzl%toolchain_aspect"), "//test:t1");
+
+    var aspectOnTarget =
+        Iterables.getOnlyElement(getAspectKeys("//test:t1", "//test:defs.bzl%toolchain_aspect"));
+    var aspectOnTargetNode =
+        skyframeExecutor.getEvaluator().getInMemoryGraph().getAllNodeEntries().stream()
+            .filter(n -> n.getKey().equals(aspectOnTarget))
+            .findFirst()
+            .orElse(null);
+    assertThat(aspectOnTargetNode).isNotNull();
+
+    var aspectsOnToolchains =
+        Iterables.transform(
+            Iterables.filter(aspectOnTargetNode.getDirectDeps(), AspectKey.class),
+            k -> k.getLabel().toString());
+    assertThat(aspectsOnToolchains).containsExactly("//toolchain:foo", "//toolchain:foo_with_dep");
+
+    var aspectOnToolchainWithDep =
+        Iterables.getOnlyElement(
+            Iterables.filter(
+                Iterables.filter(aspectOnTargetNode.getDirectDeps(), AspectKey.class),
+                k -> k.getLabel().toString().equals("//toolchain:foo_with_dep")));
+    var aspectOnToolchainWithDepNode =
+        skyframeExecutor.getEvaluator().getInMemoryGraph().getAllNodeEntries().stream()
+            .filter(n -> n.getKey().equals(aspectOnToolchainWithDep))
+            .findFirst()
+            .orElse(null);
+    assertThat(aspectOnToolchainWithDepNode).isNotNull();
+
+    var aspectOnToolchainDep =
+        Iterables.getOnlyElement(
+            Iterables.filter(aspectOnToolchainWithDepNode.getDirectDeps(), AspectKey.class));
+    assertThat(aspectOnToolchainDep.getLabel().toString()).isEqualTo("//toolchain:toolchain_dep");
+    assertThat(aspectOnToolchainDep.getAspectName()).isEqualTo("//test:defs.bzl%toolchain_aspect");
+  }
+
+  @Test
+  public void aspectCanEnumerateRuleToolchains() throws Exception {
+    scratch.file(
+        "test/defs.bzl",
+        """
+        def _impl(target, ctx):
+          print(sorted([str(t) for t in ctx.rule.toolchains.toolchain_types()]))
+          return []
+
+        toolchain_aspect = aspect(
+          implementation = _impl,
+          toolchains_aspects = ['*'],
+        )
+
+        def _rule_impl(ctx):
+          pass
+
+        r1 = rule(
+          implementation = _rule_impl,
+          toolchains = ['//rule:toolchain_type_1'],
+          exec_groups = {"gp": exec_group(toolchains = ['//rule:toolchain_type_2'])},
+        )
+        """);
+    scratch.file(
+        "test/BUILD",
+        """
+        load('//test:defs.bzl', 'r1')
+        r1(name = 't1')
+        """);
+    useConfiguration(
+        "--extra_toolchains=//toolchain:foo_toolchain,//toolchain:foo_toolchain_with_provider");
+
+    var unused = update(ImmutableList.of("//test:defs.bzl%toolchain_aspect"), "//test:t1");
+
+    assertContainsEvent("['//rule:toolchain_type_1', '//rule:toolchain_type_2']");
+  }
+
+  @Test
   public void requiredAspectPropagatesToToolchain() throws Exception {
     scratch.file(
         "test/defs.bzl",
